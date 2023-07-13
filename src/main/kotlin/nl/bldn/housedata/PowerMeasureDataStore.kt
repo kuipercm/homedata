@@ -85,7 +85,9 @@ class LocalStoragePowerMeasureDataStore(
 
         val map = objectMapper.readValue(file.readText(), typeReference)
         storage.getValue(WASHING_MACHINE).putAll(map[WASHING_MACHINE] as Map<LocalDateTime, PowerMeasureData>)
-        storage.getValue(DRYER).putAll(map[DRYER] as Map<LocalDateTime, PowerMeasureData>)
+
+        val dryerMap = map[DRYER] ?: mutableMapOf()
+        storage.getValue(DRYER).putAll(dryerMap)
     }
 
     companion object : KLogging() {
