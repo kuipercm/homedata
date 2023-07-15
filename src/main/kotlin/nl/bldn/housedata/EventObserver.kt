@@ -19,13 +19,17 @@ class EventObserver(
     @JmsListener(destination = POWER_MEASUREMENTS_TOPIC)
     fun observe(measurement: PowerMeasureData) {
         val lastMeasurement = last.getValue(measurement.source)
-        if (lastMeasurement.categorization != measurement.categorization) {
+        if (hasStoppedCycleSinceLastMeasurement(lastMeasurement, measurement)) {
             logger.debug { "Received ${measurement.source} measurement with changed category: ${measurement.measuredOutputInMilliWattHourMinute} --> Labeled as ${measurement.categorization}" }
             notificationSender.sendNotification(measurement.source, measurement.categorization)
         }
 
         last[measurement.source] = measurement
     }
+
+    private fun hasStoppedCycleSinceLastMeasurement(lastMeasurement: PowerMeasureData, measurement: PowerMeasureData) =
+        lastMeasurement.categorization == RUNNING_CYCLE &&
+                (measurement.categorization == IDLE || measurement.categorization == ACTIVE)
 
     companion object: KLogging() {
         const val POWER_MEASUREMENTS_TOPIC = "powermeasurements"
