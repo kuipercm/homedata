@@ -21,7 +21,7 @@ class DevicesDataGatherer(
 
     @Scheduled(initialDelay = 30, timeUnit = SECONDS, fixedRate = 60)
     fun gatherPowerMeasuresData() {
-        logger.debug { "Gathing power measurements" }
+        logger.info { "Gathering power measurements" }
         housedataProperties.urls.map {
             it.key to plugRestTemplate.getForEntity(
                 "${it.value}$SWITCH_STATUS_URL_SUFFIX",
@@ -39,7 +39,7 @@ class DevicesDataGatherer(
             dataStore.store(measurement)
             jmsTemplate.convertAndSend(POWER_MEASUREMENTS_TOPIC, measurement)
         }
-        logger.debug { "Power measurements gathered and stored" }
+        logger.info { "Power measurements gathered and stored" }
     }
 
     private fun Long.truncateToMinutes(): LocalDateTime =
