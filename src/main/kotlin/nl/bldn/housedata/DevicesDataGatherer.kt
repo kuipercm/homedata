@@ -57,6 +57,8 @@ class DevicesDataGatherer(
             }
             DRYER -> when {
                 measuredValue < 3.toBigDecimal() -> OFF
+                measuredValue < 10.toBigDecimal() -> IDLE
+                measuredValue < 35.toBigDecimal() -> ACTIVE
                 else -> RUNNING_CYCLE
             }
             else -> throw IllegalArgumentException("Unknown device $deviceName")
