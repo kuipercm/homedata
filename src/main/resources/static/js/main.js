@@ -17,6 +17,12 @@ const washingMachineChart = new Chart(ctxWashingMachine, {
         scales: {
             x: {
                 type: 'time',
+                time: {
+                    unit: 'minute',
+                    displayFormats: {
+                        minute: 'YYYY-MM-DD hh:mm'
+                    }
+                }
             },
             y: {
                 title: {
@@ -43,6 +49,12 @@ const dryerChart = new Chart(ctxDryer, {
         scales: {
             x: {
                 type: 'time',
+                time: {
+                    unit: 'minute',
+                    displayFormats: {
+                        minute: 'YYYY-MM-DD hh:mm'
+                    }
+                }
             },
             y: {
                 title: {
