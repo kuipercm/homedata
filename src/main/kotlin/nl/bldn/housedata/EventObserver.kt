@@ -9,6 +9,7 @@ import java.time.LocalDateTime.MIN
 @Service
 class EventObserver(
     private val notificationSender: NotificationSender,
+    private val createDeviceMessage: CreateDeviceMessage,
 ) {
     private val last: MutableMap<String, PowerMeasureData> =
         mutableMapOf(
@@ -21,7 +22,7 @@ class EventObserver(
         val lastMeasurement = last.getValue(measurement.source)
         if (hasStoppedCycleSinceLastMeasurement(lastMeasurement, measurement)) {
             logger.debug { "Received ${measurement.source} measurement with changed category: ${measurement.measuredOutputInMilliWattHourMinute} --> Labeled as ${measurement.categorization}" }
-            notificationSender.sendNotification(measurement.source, measurement.categorization)
+            notificationSender.sendNotification(createDeviceMessage(measurement.source, measurement.categorization))
         }
 
         last[measurement.source] = measurement
@@ -47,5 +48,4 @@ class EventObserver(
             categorization = "INVALID"
         )
     }
-
 }

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Products Management</title>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Bootstrap for quick styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .sortable { cursor: pointer; user-select: none; }
+        .sortable:hover { background-color: rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        function App() {
+            const [products, setProducts] = useState([]);
+            const [id, setId] = useState(null);
+            const [name, setName] = useState('');
+            const [amount, setAmount] = useState('');
+            const [containerQuantity, setContainerQuantity] = useState('');
+            const [bestBeforeDate, setBestBeforeDate] = useState('');
+
+            // States for filtering and sorting
+            const [filterText, setFilterText] = useState('');
+            const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+
+            const fetchProducts = async () => {
+                try {
+                    const response = await fetch('/api/emergency-products');
+                    if (response.ok) {
+                        const data = await response.json();
+                        setProducts(data);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch products", error);
+                }
+            };
+
+            useEffect(() => {
+                fetchProducts();
+            }, []);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+
+                const payload = {
+                    name,
+                    amount: parseInt(amount, 10),
+                    containerQuantity,
+                    bestBeforeDate: bestBeforeDate
+                };
+
+                const method = id ? 'PUT' : 'POST';
+                const url = id ? `/api/emergency-products/${id}` : '/api/emergency-products';
+
+                try {
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        fetchProducts();
+                        resetForm();
+                    } else {
+                        alert('Error saving product');
+                    }
+                } catch (error) {
+                    console.error("Failed to save product", error);
+                }
+            };
+
+            const handleDelete = async (deleteId, deleteName) => {
+                if (!window.confirm(`Are you sure you want to delete ${deleteName}?`)) return;
+
+                try {
+                    const response = await fetch(`/api/emergency-products/${deleteId}`, {
+                        method: 'DELETE'
+                    });
+                    if (response.ok) {
+                        fetchProducts();
+                    }
+                } catch (error) {
+                    console.error("Failed to delete product", error);
+                }
+            };
+
+            const handleEdit = (product) => {
+                setId(product.id);
+                setName(product.name);
+                setAmount(product.amount);
+                setContainerQuantity(product.containerQuantity);
+
+                // Format for date input (YYYY-MM-DD)
+                const dateStr = product.bestBeforeDate;
+                let formattedDate = dateStr;
+                if (dateStr && dateStr.length > 10) {
+                    formattedDate = dateStr.substring(0, 10);
+                }
+                setBestBeforeDate(formattedDate || '');
+            };
+
+            const resetForm = () => {
+                setId(null);
+                setName('');
+                setAmount('');
+                setContainerQuantity('');
+                setBestBeforeDate('');
+            };
+
+            const requestSort = (key) => {
+                let direction = 'asc';
+                if (sortConfig.key === key && sortConfig.direction === 'asc') {
+                    direction = 'desc';
+                }
+                setSortConfig({ key, direction });
+            };
+
+            const filteredProducts = useMemo(() => {
+                if (!filterText) return products;
+                const lowerFilter = filterText.toLowerCase();
+                return products.filter(p =>
+                    (p.name && p.name.toLowerCase().includes(lowerFilter)) ||
+                    (p.containerQuantity && p.containerQuantity.toLowerCase().includes(lowerFilter)) ||
+                    (p.bestBeforeDate && p.bestBeforeDate.includes(lowerFilter)) ||
+                    (p.amount !== null && p.amount.toString().includes(lowerFilter))
+                );
+            }, [products, filterText]);
+
+            const sortedProducts = useMemo(() => {
+                let sortableItems = [...filteredProducts];
+                if (sortConfig.key) {
+                    sortableItems.sort((a, b) => {
+                        let aValue = a[sortConfig.key];
+                        let bValue = b[sortConfig.key];
+
+                        if (aValue === null || aValue === undefined) aValue = '';
+                        if (bValue === null || bValue === undefined) bValue = '';
+
+                        // Number sorting vs String sorting
+                        if (typeof aValue === 'number' && typeof bValue === 'number') {
+                            return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+                        }
+
+                        if (aValue < bValue) {
+                            return sortConfig.direction === 'asc' ? -1 : 1;
+                        }
+                        if (aValue > bValue) {
+                            return sortConfig.direction === 'asc' ? 1 : -1;
+                        }
+                        return 0;
+                    });
+                }
+                return sortableItems;
+            }, [filteredProducts, sortConfig]);
+
+            const getSortIcon = (key) => {
+                if (sortConfig.key !== key) return '↕';
+                return sortConfig.direction === 'asc' ? '▲' : '▼';
+            };
+
+            return (
+                <div className="container mt-5 mb-5">
+                    <h2 className="mb-4">Emergency Products Management</h2>
+
+                    <div className="card mb-5">
+                        <div className="card-header bg-primary text-white">
+                            {id ? 'Edit Product' : 'Add New Product'}
+                        </div>
+                        <div className="card-body">
+                            <form onSubmit={handleSubmit}>
+                                <div className="row">
+                                    <div className="col-md-6 mb-3">
+                                        <label className="form-label">Name</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={name}
+                                            onChange={e => setName(e.target.value)}
+                                            required
+                                            placeholder="e.g. Bottled Water"
+                                        />
+                                    </div>
+                                    <div className="col-md-6 mb-3">
+                                        <label className="form-label">Amount</label>
+                                        <input
+                                            type="number"
+                                            className="form-control"
+                                            value={amount}
+                                            onChange={e => setAmount(e.target.value)}
+                                            required
+                                            min="0"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="row">
+                                    <div className="col-md-6 mb-3">
+                                        <label className="form-label">Container Quantity</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={containerQuantity}
+                                            onChange={e => setContainerQuantity(e.target.value)}
+                                            required
+                                            placeholder="e.g. 500ml"
+                                        />
+                                    </div>
+                                    <div className="col-md-6 mb-3">
+                                        <label className="form-label">Best Before Date</label>
+                                        <input
+                                            type="date"
+                                            className="form-control"
+                                            value={bestBeforeDate}
+                                            onChange={e => setBestBeforeDate(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="mt-3">
+                                    <button type="submit" className="btn btn-success me-2">
+                                        {id ? 'Update Product' : 'Add Product'}
+                                    </button>
+                                    {id && (
+                                        <button type="button" className="btn btn-secondary" onClick={resetForm}>
+                                            Cancel
+                                        </button>
+                                    )}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <div className="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                            <span>Current Inventory</span>
+                            <input
+                                type="text"
+                                className="form-control form-control-sm w-25"
+                                placeholder="Search products..."
+                                value={filterText}
+                                onChange={(e) => setFilterText(e.target.value)}
+                            />
+                        </div>
+                        <div className="card-body p-0">
+                            <table className="table table-striped table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th className="sortable" onClick={() => requestSort('name')}>Name {getSortIcon('name')}</th>
+                                        <th className="sortable" onClick={() => requestSort('amount')}>Amount {getSortIcon('amount')}</th>
+                                        <th className="sortable" onClick={() => requestSort('containerQuantity')}>Container Quantity {getSortIcon('containerQuantity')}</th>
+                                        <th className="sortable" onClick={() => requestSort('bestBeforeDate')}>Best Before {getSortIcon('bestBeforeDate')}</th>
+                                        <th className="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sortedProducts.map(p => (
+                                        <tr key={p.id}>
+                                            <td className="align-middle fw-bold">{p.name}</td>
+                                            <td className="align-middle">{p.amount}</td>
+                                            <td className="align-middle">{p.containerQuantity}</td>
+                                            <td className="align-middle">{p.bestBeforeDate}</td>
+                                            <td className="text-end">
+                                                <button className="btn btn-sm btn-outline-primary me-2" onClick={() => handleEdit(p)}>Edit</button>
+                                                <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(p.id, p.name)}>Delete</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {sortedProducts.length === 0 && (
+                                        <tr>
+                                            <td colSpan="5" className="text-center py-4 text-muted">No products found.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
