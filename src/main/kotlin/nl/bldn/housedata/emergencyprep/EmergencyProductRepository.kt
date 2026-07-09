@@ -1,10 +1,10 @@
 package nl.bldn.housedata.emergencyprep
 
-import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Repository
+import tools.jackson.core.type.TypeReference
+import tools.jackson.databind.json.JsonMapper
 import java.io.File
 import java.util.*
 import java.util.concurrent.locks.ReentrantReadWriteLock
@@ -12,9 +12,9 @@ import kotlin.concurrent.read
 import kotlin.concurrent.write
 
 @Repository
-class EmergencyProductRepository(private val objectMapper: ObjectMapper) {
+class EmergencyProductRepository(private val objectMapper: JsonMapper) {
     private val log = LoggerFactory.getLogger(javaClass)
-    private val storageFile = File("emergency_products.json")
+    private val storageFile = File("/home/root/app/emergency_products.json")
     private val products = mutableListOf<EmergencyProduct>()
     private val lock = ReentrantReadWriteLock()
 

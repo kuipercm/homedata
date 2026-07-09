@@ -1,12 +1,12 @@
 package nl.bldn.housedata
 
-import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import mu.KLogging
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Repository
+import tools.jackson.core.type.TypeReference
+import tools.jackson.databind.json.JsonMapper
 import java.io.File
 import java.math.BigDecimal
 import java.nio.file.Files
@@ -26,7 +26,7 @@ interface PowerMeasureDataStore {
 @Repository
 class LocalStoragePowerMeasureDataStore(
     private val clock: Clock,
-    private val objectMapper: ObjectMapper,
+    private val jsonMapper: JsonMapper,
 ): PowerMeasureDataStore {
     private val storage = mapOf(
         WASHING_MACHINE to ConcurrentHashMap<LocalDateTime, PowerMeasureData>(),
@@ -67,7 +67,7 @@ class LocalStoragePowerMeasureDataStore(
             logger.debug { "Created $USAGE_FILE" }
         }
 
-        val content = objectMapper.writeValueAsString(storage)
+        val content = jsonMapper.writeValueAsString(storage)
         logger.debug { "Storing $content" }
         file.writeText(content)
     }
@@ -81,9 +81,9 @@ class LocalStoragePowerMeasureDataStore(
             return
         }
 
-        val typeReference = object: TypeReference<Map<String, Map<LocalDateTime, PowerMeasureData>>>() {}
+        val type = jsonMapper.constructType(object: TypeReference<Map<String, Map<LocalDateTime, PowerMeasureData>>>() {})
 
-        val map = objectMapper.readValue(file.readText(), typeReference)
+        val map = jsonMapper.readValue<Map<String, Map<LocalDateTime, PowerMeasureData>>>(file.readText(), type)
         storage.getValue(WASHING_MACHINE).putAll(map[WASHING_MACHINE] as Map<LocalDateTime, PowerMeasureData>)
 
         val dryerMap = map[DRYER] ?: mutableMapOf()
